@@ -4,26 +4,50 @@ import User from '../../models/User/User.js';
 const router = Router();
 
 router.get('/', async (req, res) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ message: 'Unauthorized' });
+    try {
+        if (!req.user) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const { onid } = req.query;
+        
+        if (!onid) {
+            return res.status(400).json({ message: 'ONID is required' });
+        }
+
+        // First try to find by ONID
+        let userProfile = await User.findOne({ onid: onid });
+
+        // If not found by ONID, try to find by email
+        if (!userProfile) {
+            const email = `${onid}@oregonstate.edu`;
+            userProfile = await User.findOne({ email: email });
+        }
+
+        if (!userProfile) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Create a sanitized version of the user profile
+        const sanitizedProfile = {
+            id: userProfile._id,
+            name: userProfile.name,
+            onid: userProfile.onid || onid,
+            email: userProfile.email,
+            profile: userProfile.profile || {
+                bio: '',
+                avatar: '',
+                followers: [],
+                following: []
+            },
+            online: userProfile.online || false
+        };
+
+        return res.status(200).json({ user: sanitizedProfile });
+    } catch (err) {
+        console.error('Get Profile Error:', err);
+        return res.status(500).json({ error: err.message });
     }
-
-    const { onid } = req.query;
-    const email = `${onid}@oregonstate.edu`;
-
-    const userProfile = await User.findOne({ email: email });
-
-    const { password, ...userWithoutPassword } = userProfile.toObject();
-
-    if (!userProfile) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    return res.status(200).json({ user: userWithoutPassword });
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
 });
 
 export default router;

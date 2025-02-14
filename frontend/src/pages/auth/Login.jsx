@@ -34,6 +34,28 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const { colorMode } = useColorMode();
 
+  useEffect(() => {
+    // Get URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    const userStr = urlParams.get('user');
+
+    if (token && userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        // Store token
+        localStorage.setItem('token', token);
+        // Update Redux state
+        dispatch(loginUser(user));
+        // Redirect to home
+        navigate('/home');
+      } catch (error) {
+        console.error('Error processing Google login callback:', error);
+        setError('Failed to process Google login');
+      }
+    }
+  }, [dispatch, navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -96,6 +118,10 @@ function Login() {
       setEmail('');
       setPassword('');
     }
+  };
+
+  const handleGoogleLogin = () => {
+    window.location.href = `${BASE_URL}/api/auth/google`;
   };
 
   return (
@@ -187,6 +213,29 @@ function Login() {
               Submit
             </Button>
           </form>
+
+          <Button
+            width='full'
+            mt={4}
+            bg='white'
+            color='gray.900'
+            border='1px solid'
+            borderColor='gray.200'
+            leftIcon={
+              <Image
+                src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+                alt="Google Logo"
+                w={5}
+                h={5}
+              />
+            }
+            _hover={{
+              bg: 'gray.50'
+            }}
+            onClick={handleGoogleLogin}
+          >
+            Continue with Google
+          </Button>
         </Box>
         <Box textAlign='center'>
           {error && (

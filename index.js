@@ -3,6 +3,9 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
+import passport from 'passport'
+import session from 'express-session';
+import { generateToken } from './middleware/token.js';
 
 // Auth
 import register from './routes/auth/register.js';
@@ -40,6 +43,29 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 8080;
 
+// Add security headers
+app.use((req, res, next) => {
+    res.header('Content-Security-Policy', "default-src 'self' https: http:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: http:; connect-src 'self' https: http:; img-src 'self' https: http: data: blob:; style-src 'self' 'unsafe-inline' https: http:; frame-src 'self' https: http:;");
+    next();
+});
+
+// Session configuration
+app.use(
+    session({
+        secret: process.env.SESSION_SECRET,
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: 24 * 60 * 60 * 1000
+        }
+    })
+);
+
+// Initialize passport with session support
+app.use(passport.initialize());
+app.use(passport.session());
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 15,
@@ -55,11 +81,13 @@ const origin = process.env.NODE_ENV === 'production' ? prodOrigins : devOrigins;
 
 app.disable('x-powered-by');
 app.use(
-  cors({
-    origin: origin,
-    credentials: true,
-    optionsSuccessStatus: 200,
-  }),
+    cors({
+        origin: origin,
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+        optionsSuccessStatus: 200,
+    }),
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -71,6 +99,28 @@ app.use('/api/auth/register', register);
 app.use('/api/auth/login', login);
 app.use('/api/auth/logout', logout);
 app.use('/api/auth/load_user', verifyToken, load_user);
+app.get('/api/auth/google',
+    passport.authenticate('google', {
+        scope: ['profile', 'email']
+    })
+);
+app.get('/api/auth/google/callback',
+    passport.authenticate('google', {
+        failureRedirect: `${process.env.FRONTEND_URL}/login`,
+        session: false
+    }),
+    (req, res) => {
+        try {
+            const token = generateToken(req.user);
+            const { password, ...userWithoutPassword } = req.user.toObject();
+            
+            res.redirect(`${process.env.FRONTEND_URL}/login?token=${token}&user=${encodeURIComponent(JSON.stringify(userWithoutPassword))}`);
+        } catch (error) {
+            console.error('Callback error:', error);
+            res.redirect(`${process.env.FRONTEND_URL}/login?error=Authentication failed`);
+        }
+    }
+);
 
 app.use('/api/social/follow_user', verifyToken, follow_user);
 app.use('/api/social/get_profile', verifyToken, get_profile);
