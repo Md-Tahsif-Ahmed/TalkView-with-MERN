@@ -9,6 +9,7 @@ import {
   useColorMode,
   useColorModeValue,
   useMediaQuery,
+  Select,
 } from '@chakra-ui/react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
@@ -31,59 +32,230 @@ function Signup() {
   const navigate = useNavigate();
   const [isMobile] = useMediaQuery('(max-width: 768px)');
   const { colorMode } = useColorMode();
+  const [step, setStep] = useState(1);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [gender, setGender] = useState('');
+  const [preferredPartner, setPreferredPartner] = useState('');
+  const [educationLevel, setEducationLevel] = useState('');
+  const [englishLevel, setEnglishLevel] = useState('');
+  const [learningPurpose, setLearningPurpose] = useState('');
 
   const handleSubmit = async (e) => {
-    const data = {
-      email,
-      name,
-      password,
-    };
     e.preventDefault();
     setIsLoading(true);
 
-    if (name === '' || email === '' || password === '') {
-      setTimeout(() => {
+    if (step === 1) {
+      if (name === '' || email === '' || password === '' || phoneNumber === '' || 
+          gender === '' || preferredPartner === '') {
         setIsLoading(false);
         setError('Please fill in all fields');
         return;
-      }, 1000);
+      }
+      setStep(2);
+      setIsLoading(false);
+      return;
     }
 
-    try {
-      const res = await axios.post(`${BASE_URL}/api/auth/register`, data);
-
-      if (res.status === 201) {
-        setTimeout(() => {
-          setError('');
-          setIsLoading(false);
-
-          setResponse('Signup successful!');
-        }, 1000);
-        setTimeout(() => {
-          navigate('/login');
-          setIsLoading(false);
-        }, 2000);
-      } else {
-        setError('Signup failed');
-        setTimeout(() => {
-          setIsLoading(false);
-        }, 1000);
+    if (step === 2) {
+      if (educationLevel === '' || englishLevel === '' || learningPurpose === '') {
+        setIsLoading(false);
+        setError('Please fill in all fields');
+        return;
       }
-    } catch (err) {
-      console.error(err.response.data.message);
-      setIsLoading(false);
-      if (err.response.data.message === 'User already exists') {
-        setError('User already exists');
-      } else if (
-        err.response.data.message.substring(err.response.data.message.length - 71) ===
-        'fails to match the required pattern: ^[a-zA-Z0-9._%+-]+@oregonstate.edu$'
-      ) {
-        setError('Please use your Oregon State email');
-      } else {
-        setError('Signup failed');
+
+      const data = {
+        email,
+        name,
+        password,
+        phoneNumber,
+        gender,
+        preferredPartner,
+        educationLevel,
+        englishLevel,
+        learningPurpose,
+      };
+
+      try {
+        const res = await axios.post(`${BASE_URL}/api/auth/register`, data);
+
+        if (res.status === 201) {
+          setTimeout(() => {
+            setError('');
+            setIsLoading(false);
+
+            setResponse('Signup successful!');
+          }, 1000);
+          setTimeout(() => {
+            navigate('/login');
+            setIsLoading(false);
+          }, 2000);
+        } else {
+          setError('Signup failed');
+          setTimeout(() => {
+            setIsLoading(false);
+          }, 1000);
+        }
+      } catch (err) {
+        console.error(err.response.data.message);
+        setIsLoading(false);
+        if (err.response.data.message === 'User already exists') {
+          setError('User already exists');
+        } else if (
+          err.response.data.message.substring(err.response.data.message.length - 71) ===
+          'fails to match the required pattern: ^[a-zA-Z0-9._%+-]+@oregonstate.edu$'
+        ) {
+          setError('Please use your Oregon State email');
+        } else {
+          setError('Signup failed');
+        }
       }
     }
   };
+
+  const renderStep1 = () => (
+    <form onSubmit={handleSubmit}>
+      <Input
+        variant='filled'
+        mb={3}
+        type='email'
+        _active={{
+          borderColor: colorMode === 'light' ? '#f2a673' : '#DE6A1F',
+        }}
+        _focus={{
+          borderColor: colorMode === 'light' ? '#f2a673' : '#DE6A1F',
+        }}
+        autoComplete='email'
+        _placeholder={{
+          color: colorMode === 'light' ? '#f2a673' : '#DE6A1F',
+        }}
+        placeholder='Email'
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <Input
+        variant='filled'
+        mb={3}
+        _active={{
+          borderColor: colorMode === 'light' ? '#f2a673' : '#DE6A1F',
+        }}
+        _focus={{
+          borderColor: colorMode === 'light' ? '#f2a673' : '#DE6A1F',
+        }}
+        type='text'
+        _placeholder={{
+          color: colorMode === 'light' ? '#f2a673' : '#DE6A1F',
+        }}
+        autoComplete='name'
+        placeholder='Name'
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+      />
+      <Input
+        variant='filled'
+        mb={3}
+        _active={{
+          borderColor: colorMode === 'light' ? '#f2a673' : '#DE6A1F',
+        }}
+        _focus={{
+          borderColor: colorMode === 'light' ? '#f2a673' : '#DE6A1F',
+        }}
+        type='password'
+        autoComplete='current-password'
+        _placeholder={{
+          color: colorMode === 'light' ? '#f2a673' : '#DE6A1F',
+        }}
+        placeholder='Password'
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+      />
+      <Input
+        variant='filled'
+        mb={3}
+        type='tel'
+        placeholder='Phone Number'
+        value={phoneNumber}
+        onChange={(e) => setPhoneNumber(e.target.value)}
+      />
+      <Select
+        variant='filled'
+        mb={3}
+        placeholder='Gender'
+        value={gender}
+        onChange={(e) => setGender(e.target.value)}
+      >
+        <option value='male'>Male</option>
+        <option value='female'>Female</option>
+        <option value='other'>Other</option>
+      </Select>
+      <Select
+        variant='filled'
+        mb={3}
+        placeholder='Preferred Speaking Partner'
+        value={preferredPartner}
+        onChange={(e) => setPreferredPartner(e.target.value)}
+      >
+        <option value='any'>Any</option>
+        <option value='male'>Male</option>
+        <option value='female'>Female</option>
+      </Select>
+      <Button
+        width='full'
+        mt={4}
+        type='submit'
+        isLoading={isLoading}
+      >
+        Next
+      </Button>
+    </form>
+  );
+
+  const renderStep2 = () => (
+    <form onSubmit={handleSubmit}>
+      <Select
+        variant='filled'
+        mb={3}
+        placeholder='Education Level'
+        value={educationLevel}
+        onChange={(e) => setEducationLevel(e.target.value)}
+      >
+        <option value='school'>School Student</option>
+        <option value='college'>College Student</option>
+        <option value='university'>University Student</option>
+        <option value='job'>Job Seeker/Holder</option>
+      </Select>
+      <Select
+        variant='filled'
+        mb={3}
+        placeholder='English Proficiency Level'
+        value={englishLevel}
+        onChange={(e) => setEnglishLevel(e.target.value)}
+      >
+        <option value='beginner'>Beginner</option>
+        <option value='intermediate'>Intermediate</option>
+        <option value='advanced'>Advanced</option>
+      </Select>
+      <Select
+        variant='filled'
+        mb={3}
+        placeholder='Learning Purpose'
+        value={learningPurpose}
+        onChange={(e) => setLearningPurpose(e.target.value)}
+      >
+        <option value='ielts'>IELTS</option>
+        <option value='study_abroad'>Study Abroad</option>
+        <option value='job'>Job</option>
+        <option value='personal'>Personal Improvement</option>
+      </Select>
+      <Button
+        width='full'
+        mt={4}
+        type='submit'
+        isLoading={isLoading}
+      >
+        Submit
+      </Button>
+    </form>
+  );
 
   return (
     <Flex
@@ -126,73 +298,7 @@ function Signup() {
           </Heading>
         </Box>
         <Box my={4} textAlign='left'>
-          <form onSubmit={handleSubmit}>
-            <Input
-              variant='filled'
-              mb={3}
-              type='email'
-              _active={{
-                borderColor: colorMode === 'light' ? '#f2a673' : '#DE6A1F',
-              }}
-              _focus={{
-                borderColor: colorMode === 'light' ? '#f2a673' : '#DE6A1F',
-              }}
-              autoComplete='email'
-              _placeholder={{
-                color: colorMode === 'light' ? '#f2a673' : '#DE6A1F',
-              }}
-              placeholder='Email'
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <Input
-              variant='filled'
-              mb={3}
-              _active={{
-                borderColor: colorMode === 'light' ? '#f2a673' : '#DE6A1F',
-              }}
-              _focus={{
-                borderColor: colorMode === 'light' ? '#f2a673' : '#DE6A1F',
-              }}
-              type='text'
-              _placeholder={{
-                color: colorMode === 'light' ? '#f2a673' : '#DE6A1F',
-              }}
-              autoComplete='name'
-              placeholder='Name'
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <Input
-              variant='filled'
-              mb={3}
-              _active={{
-                borderColor: colorMode === 'light' ? '#f2a673' : '#DE6A1F',
-              }}
-              _focus={{
-                borderColor: colorMode === 'light' ? '#f2a673' : '#DE6A1F',
-              }}
-              type='password'
-              autoComplete='current-password'
-              _placeholder={{
-                color: colorMode === 'light' ? '#f2a673' : '#DE6A1F',
-              }}
-              placeholder='Password'
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            <Button
-              width='full'
-              mt={4}
-              bg={colorMode === 'light' ? '#f2a673' : '#DE6A1F'}
-              isLoading={isLoading}
-              loadingText='Creating account...'
-              type='submit'
-              onClick={handleSubmit}
-            >
-              Submit
-            </Button>
-          </form>
+          {step === 1 ? renderStep1() : renderStep2()}
         </Box>
         {error && (
           <Text mt={4} textAlign='center' color='red.500'>

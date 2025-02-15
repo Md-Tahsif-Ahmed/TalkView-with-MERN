@@ -65,22 +65,34 @@ export const editUser = createAsyncThunk('user/edit', async (values, { rejectWit
   }
 });
 
-export const followUser = createAsyncThunk('user/follow', async (values, { rejectWithValue }) => {
-  try {
-    const response = await axios.post(
-      `${BASE_URL}/api/social/follow_user`,
-      values,
-      {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+export const followUser = createAsyncThunk(
+  'user/followUser',
+  async ({ email, currentUserEmail }, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No token found');
+      }
+
+      const response = await axios.post(
+        `${import.meta.env.VITE_APP_PROD_BACKEND_URL}/api/social/follow_user`,
+        {
+          email,
+          currentUserEmail,
         },
-      },
-    );
-    return response.data;
-  } catch (err) {
-    return rejectWithValue(err.response.data);
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      return response.data;
+    } catch (err) {
+      return rejectWithValue(err.response.data);
+    }
   }
-});
+);
 
 const initialState = {
   data: null,
@@ -152,6 +164,12 @@ const userSlice = createSlice({
     });
     builder.addCase(followUser.fulfilled, (state, action) => {
       state.data = action.payload.user;
+      state.isLoading = false;
+      state.error = null;
+    });
+    builder.addCase(followUser.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload?.message || 'Failed to follow user';
     });
   },
 });

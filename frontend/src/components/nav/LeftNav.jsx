@@ -48,7 +48,7 @@ export default function LeftNav() {
                     size="sm"
                     onClick={() => {
                         if (!user) return;
-                        navigate(`/profile/${email.split("@")[0]}`);
+                        navigate(`/profile/${user.displayName}`);
                     }}
                 >
                     Profile

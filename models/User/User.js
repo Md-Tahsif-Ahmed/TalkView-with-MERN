@@ -10,9 +10,39 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true,
         unique: true,
+        sparse: true,
     },
     password: {
         type: String,
+        required: true,
+    },
+    phoneNumber: {
+        type: String,
+        required: true,
+    },
+    gender: {
+        type: String,
+        enum: ['male', 'female', 'other'],
+        required: true,
+    },
+    preferredPartner: {
+        type: String,
+        enum: ['any', 'male', 'female'],
+        required: true,
+    },
+    educationLevel: {
+        type: String,
+        enum: ['school', 'college', 'university', 'job'],
+        required: true,
+    },
+    englishLevel: {
+        type: String,
+        enum: ['beginner', 'intermediate', 'advanced'],
+        required: true,
+    },
+    learningPurpose: {
+        type: String,
+        enum: ['ielts', 'study_abroad', 'job', 'personal'],
         required: true,
     },
     onid: {
@@ -58,6 +88,11 @@ const userSchema = new mongoose.Schema({
     posts: {
         type: [Post.Schema],
         default: [],
+    },
+    facebookId: {
+        type: String,
+        unique: true,
+        sparse: true,
     },
 })
 

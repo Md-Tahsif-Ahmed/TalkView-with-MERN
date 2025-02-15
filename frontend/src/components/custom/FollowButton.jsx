@@ -1,102 +1,41 @@
-import { AddIcon, CheckIcon } from '@chakra-ui/icons';
-import { Box, Button, Flex, IconButton, Spinner, Text } from '@chakra-ui/react';
-import React, { useEffect } from 'react';
+import { Button } from '@chakra-ui/react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import { followUser, selectIsFollowing, selectUser } from '../../redux/slices/UserSlice';
+import { followUser } from '../../redux/slices/UserSlice';
 
-// Current user can follow/unfollow the props.user
 export default function FollowButton({ user }) {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const loggedInUser = useSelector(selectUser);
-  const isFollowing = useSelector(selectIsFollowing(user._id));
-  const [userIsFollowing, setUserIsFollowing] = React.useState(isFollowing);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const email = loggedInUser?.email;
+  const currentUser = useSelector((state) => state.user.data);
 
-  const handleFollow = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setUserIsFollowing(!userIsFollowing);
-    const req = {
-      currentUserEmail: loggedInUser.email,
-      email: user.email,
-    };
-    dispatch(followUser(req)).finally(() => setIsSubmitting(false));
+  // Early return if no user data
+  if (!user || !currentUser) {
+    return null;
+  }
+
+  // Check if the current user is viewing their own profile
+  if (user.email === currentUser.email) {
+    return null;
+  }
+
+  const isFollowing = currentUser.profile?.following?.find(
+    (followingId) => followingId === user._id
+  );
+
+  const handleFollow = () => {
+    dispatch(
+      followUser({
+        email: user.email,
+        currentUserEmail: currentUser.email,
+      })
+    );
   };
 
-  useEffect(() => {
-    setUserIsFollowing(isFollowing);
-  }, [isFollowing]);
-
-  if (email === user?.email)
-    return (
-      <Flex>
-        <Box my={6}>
-          <Button
-            colorScheme={'orange'}
-            variant='outline'
-            size='sm'
-            onClick={() => {
-              navigate('/edit');
-            }}
-          >
-            Edit Profile
-          </Button>
-        </Box>
-      </Flex>
-    );
-
   return (
-    loggedInUser && (
-      <Flex>
-        <Box my={6}>
-          <IconButton
-            onClick={handleFollow}
-            aria-label='Follow'
-            icon={
-              isSubmitting ? (
-                <Spinner size='sm' color='gray.400' />
-              ) : userIsFollowing ? (
-                <>
-                  <Flex
-                    direction='row'
-                    gap={2}
-                    mx={2}
-                    align='center'
-                    justify='center'
-                    w='100%'
-                    h='100%'
-                  >
-                    <Text ml={2} fontSize='sm'>
-                      Following
-                    </Text>
-                    <CheckIcon />
-                  </Flex>
-                </>
-              ) : (
-                <>
-                  <Flex
-                    direction='row'
-                    gap={2}
-                    mx={2}
-                    align='center'
-                    justify='center'
-                    w='100%'
-                    h='100%'
-                  >
-                    <Text ml={2} fontSize='sm'>
-                      Follow
-                    </Text>
-                    <AddIcon />
-                  </Flex>
-                </>
-              )
-            }
-          ></IconButton>
-        </Box>
-      </Flex>
-    )
+    <Button
+      colorScheme={isFollowing ? 'red' : 'green'}
+      onClick={handleFollow}
+      mb={4}
+    >
+      {isFollowing ? 'Unfollow' : 'Follow'}
+    </Button>
   );
 }

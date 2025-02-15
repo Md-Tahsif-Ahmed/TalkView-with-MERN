@@ -18,7 +18,12 @@ router.get('/', async (req, res) => {
         // First try to find by ONID
         let userProfile = await User.findOne({ onid: onid });
 
-        // If not found by ONID, try to find by email
+        // If not found by ONID, try to find by facebookId
+        if (!userProfile) {
+            userProfile = await User.findOne({ facebookId: onid });
+        }
+
+        // If still not found, try to find by email
         if (!userProfile) {
             const email = `${onid}@oregonstate.edu`;
             userProfile = await User.findOne({ email: email });
@@ -40,7 +45,8 @@ router.get('/', async (req, res) => {
                 followers: [],
                 following: []
             },
-            online: userProfile.online || false
+            online: userProfile.online || false,
+            facebookId: userProfile.facebookId // Add this if needed for frontend checks
         };
 
         return res.status(200).json({ user: sanitizedProfile });

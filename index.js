@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit';
 import passport from 'passport'
 import session from 'express-session';
 import { generateToken } from './middleware/token.js';
+import crypto from 'crypto';
 
 // Auth
 import register from './routes/auth/register.js';
@@ -43,9 +44,26 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// Add security headers
+// Update the security headers middleware
 app.use((req, res, next) => {
-    res.header('Content-Security-Policy', "default-src 'self' https: http:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: http:; connect-src 'self' https: http:; img-src 'self' https: http: data: blob:; style-src 'self' 'unsafe-inline' https: http:; frame-src 'self' https: http:;");
+    // Generate a unique nonce for each request
+    const nonce = crypto.randomBytes(16).toString('base64');
+    
+    res.header('Content-Security-Policy', 
+        "default-src 'self' https://*.facebook.com; " +
+        `script-src 'self' 'unsafe-inline' 'unsafe-eval' 'nonce-${nonce}' ` +
+        "https://*.facebook.com https://*.fbcdn.net https://*.facebook.net " +
+        "https://connect.facebook.net https://*.google-analytics.com https://*.google.com; " +
+        "style-src 'self' 'unsafe-inline' https://*.facebook.com; " +
+        "img-src 'self' data: blob: https://*.facebook.com https://*.fbcdn.net https://*.facebook.net; " +
+        "font-src 'self' data: https://*.facebook.com https://*.fbcdn.net https://*.facebook.net; " +
+        "connect-src 'self' https://*.facebook.com https://*.fbcdn.net https://*.facebook.net; " +
+        "frame-src 'self' https://*.facebook.com https://www.facebook.com; " +
+        "media-src 'self' https://*.facebook.com https://*.fbcdn.net;"
+    );
+    
+    // Make nonce available to your views/templates if needed
+    res.locals.nonce = nonce;
     next();
 });
 
@@ -65,6 +83,13 @@ app.use(
 // Initialize passport with session support
 app.use(passport.initialize());
 app.use(passport.session());
+
+// Apply rate limiter only to registration to prevent abuse
+const registrationLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // limit each IP to 5 registration requests per hour
+  message: 'Too many registration attempts, please try again later',
+});
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -95,7 +120,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 // app.use('/api', limiter);
-app.use('/api/auth/register', register);
+app.use('/api/auth/register', registrationLimiter, register);
 app.use('/api/auth/login', login);
 app.use('/api/auth/logout', logout);
 app.use('/api/auth/load_user', verifyToken, load_user);
@@ -117,6 +142,31 @@ app.get('/api/auth/google/callback',
             res.redirect(`${process.env.FRONTEND_URL}/login?token=${token}&user=${encodeURIComponent(JSON.stringify(userWithoutPassword))}`);
         } catch (error) {
             console.error('Callback error:', error);
+            res.redirect(`${process.env.FRONTEND_URL}/login?error=Authentication failed`);
+        }
+    }
+);
+
+// Add these Facebook routes after your Google routes
+app.get('/api/auth/facebook',
+    passport.authenticate('facebook', {
+        scope: ['email', 'public_profile']
+    })
+);
+
+app.get('/api/auth/facebook/callback',
+    passport.authenticate('facebook', {
+        failureRedirect: `${process.env.FRONTEND_URL}/login`,
+        session: false
+    }),
+    (req, res) => {
+        try {
+            const token = generateToken(req.user);
+            const { password, ...userWithoutPassword } = req.user.toObject();
+            
+            res.redirect(`${process.env.FRONTEND_URL}/login?token=${token}&user=${encodeURIComponent(JSON.stringify(userWithoutPassword))}`);
+        } catch (error) {
+            console.error('Facebook Callback error:', error);
             res.redirect(`${process.env.FRONTEND_URL}/login?error=Authentication failed`);
         }
     }

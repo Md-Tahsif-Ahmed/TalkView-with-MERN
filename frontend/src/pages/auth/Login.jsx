@@ -236,6 +236,29 @@ function Login() {
           >
             Continue with Google
           </Button>
+
+          <Button
+            width='full'
+            mt={4}
+            bg='#1877F2'
+            color='white'
+            leftIcon={
+              <Image
+                src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Facebook_Logo_%282019%29.png/1024px-Facebook_Logo_%282019%29.png"
+                alt="Facebook Logo"
+                w={5}
+                h={5}
+              />
+            }
+            _hover={{
+              bg: '#166FE5'
+            }}
+            onClick={() => {
+              window.location.href = `${BASE_URL}/api/auth/facebook`;
+            }}
+          >
+            Continue with Facebook
+          </Button>
         </Box>
         <Box textAlign='center'>
           {error && (
